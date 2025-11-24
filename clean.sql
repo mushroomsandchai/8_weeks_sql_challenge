@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS stg_customer_orders;
 
 CREATE TABLE stg_customer_orders (
+	row_num BIGSERIAL PRIMARY KEY,
     order_id INTEGER,
     customer_id INTEGER,
     pizza_id INTEGER,
@@ -32,7 +33,8 @@ SELECT
         ELSE extras
     END AS extras,
     order_time
-FROM customer_orders;
+FROM 
+	pizza_runner.customer_orders;
 
 
 
