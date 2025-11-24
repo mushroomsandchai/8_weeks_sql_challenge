@@ -70,4 +70,45 @@ SELECT
 		ELSE cancellation
 	END as cancellation
 FROM
-	runner_orders
+	runner_orders;
+
+
+DROP TABLE IF EXISTS dim_pizza_recipes;
+
+CREATE TABLE dim_pizza_recipes (
+	pizza_id INTEGER,
+	topping_id INTEGER
+);
+
+INSERT INTO dim_pizza_recipes(pizza_id, topping_id)
+SELECT
+	pizza_id,
+	CAST(UNNEST(STRING_TO_ARRAY(toppings, ', ')) as INTEGER)
+from
+	pizza_runner.pizza_recipes;
+
+
+DROP TABLE IF EXISTS fact_pizza_recipes;
+
+CREATE TABLE fact_pizza_recipes (
+	pizza_id INTEGER,
+	pizza_name VARCHAR(20),
+	toppings VARCHAR(100)
+);
+
+INSERT INTO fact_pizza_recipes(pizza_id, pizza_name, toppings)
+select
+	n.pizza_id,
+	n.pizza_name as pizza_name,
+	string_agg(t.topping_name, ', ') as ingredients		
+from
+	pizza_runner.pizza_names n
+join
+	dim_pizza_recipes s on
+	s.pizza_id = n.pizza_id
+join
+	pizza_runner.pizza_toppings t on
+	t.topping_id = s.topping_id
+group by
+	n.pizza_name,
+	n.pizza_id;
