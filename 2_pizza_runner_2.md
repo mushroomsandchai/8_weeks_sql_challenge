@@ -47,8 +47,66 @@ ORDER BY
 
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 ```sql
+WITH pizza_count as (
+	SELECT
+		c.order_id,
+		COUNT(c.pizza_id) as cnt,
+		MAX(EXTRACT(EPOCH FROM (r.pickup_time - c.order_time))) / 60.0 as duration
+	FROM
+		stg_customer_orders c
+	JOIN
+		stg_runner_orders r ON
+		r.order_id = c.order_id
+	GROUP BY
+		c.order_id
+),
+avg_time as(
+	SELECT
+		cnt,
+		AVG(duration) as duration
+	FROM
+		pizza_count
+	GROUP BY
+		cnt
+)
+SELECT
+	cnt,
+	ROUND(duration, 2) as avg_duration
+FROM
+	avg_time
+ORDER BY
+	duration DESC,
+	cnt DESC
 ```
+| num_pizzas | avg_duration_in_min |
+| ---------- | ------------------- |
+|      3     |        29.28        |
+|      2     |        18.38        |
+|      1     |        12.36        |
 
+```sql
+SELECT
+	CAST(REGR_R2(avg_duration, cnt) AS NUMERIC(10, 4)) as r2_value
+FROM
+	avg_duration
+```
+|  r2_value  |
+| ---------- |
+|   0.9730   |
+
+Indicating a strong relation.
+
+```sql
+SELECT
+	CAST(REGR_SLOPE(avg_duration, cnt) AS NUMERIC(10, 4)) as slope
+FROM
+	avg_duration
+```
+|    slope   |
+| ---------- |
+|   8.4600   |
+
+Indicating that for every extra pizza in an order the HQ took 8.46 min longer to prepare the order.
 
 ### 4. What was the average distance travelled for each customer?
 ```sql
@@ -87,3 +145,55 @@ FROM
 
 
 ### 6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
+```sql
+SELECT
+	runner_id,
+	(distance * 1000.0) / (duration * 60.0) as average_speed
+FROM
+	stg_runner_orders
+WHERE
+	cancellation IS NULL
+```
+
+| runner_id | average_speed |
+| --------- | ------------- |
+|     1     |     12.35     |
+|     1     |     11.17     |
+|     1     |     10.42     |
+|     2     |     9.75      |
+|     3     |     11.11     |
+|     2     |     16.67     |
+|     2     |     26.00     |
+|     1     |     16.67     |
+
+```sql
+SELECT 
+	CAST(REGR_R2(average_speed, runner_id) AS NUMERIC(10, 4)) as r2 
+FROM 
+	avg_speed
+```
+|     r2     |
+| ---------- |
+|   0.0136   |
+
+
+Indicating a weak relation.
+
+
+### 7. What is the successful delivery percentage for each runner?
+```sql
+SELECT
+	runner_id,
+	COUNT(CASE WHEN cancellation IS NULL THEN 1 END) * 100 / COUNT(*) as successful
+FROM
+	pizza_runner.stg_runner_orders
+GROUP BY
+	runner_id
+ORDER BY
+	successful DESC
+```
+| runner_id | successful |
+| --------- | ---------- |
+|     1     |    100     |
+|     2     |     75     |
+|     3     |     50     |
