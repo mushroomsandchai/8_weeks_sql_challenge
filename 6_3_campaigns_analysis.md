@@ -37,7 +37,7 @@ left join clique_bait.users u on u.cookie_id = e.cookie_id
 left join clique_bait.page_hierarchy ph on e.page_id = ph.page_id
 left join clique_bait.event_identifier ei on e.event_type = ei.event_type
 left join clique_bait.campaign_identifier ci on 
-ci.start_date >= to_char(e.event_time, 'YYYY-MM-DD')::date and 
+to_char(e.event_time, 'YYYY-MM-DD')::date >= ci.start_date and 
 to_char(e.event_time, 'YYYY-MM-DD')::date <= ci.end_date
 group by 1, 2, 7
 ```
