@@ -138,9 +138,19 @@ order by 2 desc;
 
 ### 9. What are the top 3 products by purchases?
 ```sql
+with purchased_visits as (
+  	select
+    	distinct visit_id
+    from clique_bait.events e
+    join clique_bait.event_identifier ei on ei.event_type = e.event_type
+    where ei.event_name = 'Purchase'
+)
 select 
-	coalesce(ph.product_id, null) as product_id, 
-    count(case when ei.event_name = 'Purchase' then 1 end) as purchase_count
+	ph.page_name as product_id, 
+    count(case when ei.event_name = 'Add to Cart' and
+          			e.visit_id in (select * from purchased_visits)
+          	   then 1
+          end) as purchase_count
 from clique_bait.events e
 join clique_bait.page_hierarchy ph on e.page_id = ph.page_id
 join clique_bait.event_identifier ei on e.event_type = ei.event_type
@@ -150,6 +160,6 @@ limit 3;
 ```
 | product_id | purchase_count |
 | ---------- | -------------- |
-| null       | 1777           |
-| 9          | 0              |
-| 8          | 0              |
+| Lobster    | 754            |
+| Oyster     | 726            |
+| Crab       | 719            |
