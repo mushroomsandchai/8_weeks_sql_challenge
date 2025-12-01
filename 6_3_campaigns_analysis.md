@@ -61,8 +61,70 @@ group by 1, 2, 7
 | 2       | e26a84   | 2020-01-18 16:06:40.90728  | 6          | 2         | 1         | Half Off - Treat Your Shellf(ish) | 0             | 0        | Salmon, Oyster                                                                        |
 
 
- - Identifying users who have received impressions during each campaign period and comparing each metric with other users who did not have an impression event
- - Does clicking on an impression lead to higher purchase rates?
- - What is the uplift in purchase rate when comparing users who click on a campaign impression versus users who do not receive an impression? What if we compare them with users who just an impression but do not click?
- - What metrics can you use to quantify the success or failure of each campaign compared to eachother?
+### 1. Identifying users who have received impressions during each campaign period and comparing each metric with other users who did not have an impression event
+```sql
+select
+	coalesce(campaign_name, 'No active campaign') as campaign_name,
+    round((count(case when ad_impression = 1 and purchased = 1 then 1 end) * 100.0) / count(case when ad_impression = 1 then 1 end), 2) as impression_purchase,
+    round((count(case when ad_impression = 0 and purchased = 1 then 1 end) * 100.0) / count(case when ad_impression = 0 then 1 end), 2) as no_impression_purchase,
+    round(avg(case when ad_impression = 1 then page_views end), 2) as impression_avg_views,
+    round(avg(case when ad_impression = 0 then page_views end), 2)as no_impression_avg_views,
+    round(avg(case when ad_impression = 1 then cart_adds end), 2) as impression_avg_cart_adds,
+    round(avg(case when ad_impression = 0 then cart_adds end), 2) as no_impression_avg_cart_adds
+from aggregated
+group by 1
+```
+| coalesce                          | impression_purchase | no_impression_purchase | impression_avg_views | no_impression_avg_views | impression_avg_cart_adds | no_impression_avg_cart_adds |
+| --------------------------------- | ------------------- | ---------------------- | -------------------- | ----------------------- | ------------------------ | --------------------------- |
+| 25% Off - Living The Lux Life     | 82.46               | 39.05                  | 8.67                 | 5.12                    | 5.11                     | 1.54                        |
+| BOGOF - Fishing For Compliments   | 82.43               | 36.57                  | 8.81                 | 5.05                    | 5.42                     | 1.46                        |
+| Half Off - Treat Your Shellf(ish) | 85.47               | 38.04                  | 8.51                 | 4.97                    | 5.01                     | 1.49                        |
+| No active campaign                | 79.61               | 43.49                  | 8.41                 | 5.05                    | 4.86                     | 1.54                        |
 
+### 2. Does clicking on an impression lead to higher purchase rates?
+ ```sql
+ select
+	coalesce(campaign_name, 'No active campaign') as campaign_name,
+    round((count(case when ad_click = 1 and purchased = 1 then 1 end) * 100.0) / count(case when ad_click = 1 then 1 end), 2) as click_purchase,
+    round((count(case when ad_impression = 1 and ad_click = 0 and purchased = 1 then 1 end) * 100.0) / count(case when ad_impression = 1 and ad_click = 0 then 1 end), 2) as no_click_purchase
+from aggregated
+group by 1
+```
+| campaign_name                     | click_purchase | no_click_purchase |
+| --------------------------------- | -------------- | ----------------- |
+| 25% Off - Living The Lux Life     | 86.36          | 69.23             |
+| BOGOF - Fishing For Compliments   | 87.50          | 50.00             |
+| Half Off - Treat Your Shellf(ish) | 89.98          | 67.24             |
+| No active campaign                | 86.42          | 54.55             |
+
+### 3. What is the uplift in purchase rate when comparing users who click on a campaign impression versus users who do not receive an impression? What if we compare them with users who just an impression but do not click?
+```sql
+rates as (
+    select
+        coalesce(campaign_name, 'No active campaign') as campaign_name,
+        round((count(case when ad_click = 1 and purchased = 1 then 1 end) * 100.0) / count(case when ad_click = 1 then 1 end), 2) as click_purchase,
+        round((count(case when ad_impression = 0 and ad_click = 0 and purchased = 1 then 1 end) * 100.0) / count(case when ad_impression = 0 and ad_click = 0 then 1 end), 2) as no_impression_purchase,
+        round((count(case when ad_impression = 1 and ad_click = 0 and purchased = 1 then 1 end) * 100.0) / count(case when ad_impression = 1 and ad_click = 0 then 1 end), 2) as no_click_impression_purchase
+    from aggregated
+    group by 1
+)
+select
+	campaign_name,
+	click_purchase,
+	no_impression_purchase,
+	no_click_impression_purchase,
+    round(((click_purchase - no_impression_purchase) * 100.0) / no_impression_purchase , 2) as click_v_no_impression,
+    round(((click_purchase - no_click_impression_purchase) * 100.0) / no_click_impression_purchase , 2) as impression_v_no_click
+from rates
+```
+| campaign_name                     | click_purchase | no_impression_purchase | no_click_impression_purchase | click_v_no_impression | impression_v_no_click |
+| --------------------------------- | -------------- | ---------------------- | ---------------------------- | --------------------- | --------------------- |
+| 25% Off - Living The Lux Life     | 86.36          | 39.05                  | 69.23                        | 121.15                | 24.74                 |
+| BOGOF - Fishing For Compliments   | 87.50          | 36.57                  | 50.00                        | 139.27                | 75.00                 |
+| Half Off - Treat Your Shellf(ish) | 89.98          | 38.04                  | 67.24                        | 136.54                | 33.82                 |
+| No active campaign                | 86.42          | 43.49                  | 54.55                        | 98.71                 | 58.42                 |
+
+### 4. What metrics can you use to quantify the success or failure of each campaign compared to eachother?
+Engagement rate - (clicks / impression) * 100
+Cost of aquasiation - (total_cost_of_campaign / total_acquired_users)
+Efficiency rate - (total_profit / total_acquired_users)
