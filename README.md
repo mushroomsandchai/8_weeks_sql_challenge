@@ -29,11 +29,10 @@ Case study solutions for the 8 Week SQL Challenge.
 
 ##### Note: These are my solutions and they haven't been verified to be correct.
 
-Additionally, the site provides a curated list of **free SQL learning resources** — tutorials, blog posts, videos, docs for different SQL dialects — useful before, during, or after the Challenge. 
+Additionally, the site provides a curated list of **free SQL learning resources** — tutorials, blog posts, videos, docs for different SQL dialects. Useful before, during, or after the Challenge. 
 
 ## ✅ What You’ll Learn
 
-By completing the Challenge — and especially if you attempt all 8 case studies — you’ll get comfortable with a broad range of SQL and data-analysis skills, including (but not limited to): 
 * Filtering, ordering, aggregation
 * Joins, subqueries, and complex table relationships
 * Common Table Expressions (CTEs) and recursive queries
